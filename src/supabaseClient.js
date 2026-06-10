@@ -1,0 +1,9 @@
+import { createClient } from "@supabase/supabase-js";
+
+const url = import.meta.env.VITE_SUPABASE_URL;
+const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+/* Ha nincs beállítva a két környezeti változó, az app localStorage-zal fut
+   (lásd main.jsx). Bejelentkezéses, szinkronizált tároláshoz töltsd ki őket. */
+export const supabaseReady = Boolean(url && anon);
+export const supabase = supabaseReady ? createClient(url, anon) : null;
