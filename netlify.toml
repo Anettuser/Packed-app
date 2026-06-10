@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# A biztosítás-ajánló hívása: /api/anthropic -> a serverless function
+[[redirects]]
+  from = "/api/anthropic"
+  to = "/.netlify/functions/anthropic"
+  status = 200
+
+# SPA fallback (egyoldalas app)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
