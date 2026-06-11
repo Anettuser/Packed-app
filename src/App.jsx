@@ -794,17 +794,19 @@ function NewTrip({ onClose, onCreate, customTpls, onRemoveTemplate }) {
    A kg/méret értékek tájékoztató, gazdaságos osztályú alapértékek (2026); a tarifa
    és az útvonal módosíthatja őket. cabinKg=null → nincs súlyhatár, csak méret. */
 const AIRLINES = [
-  { id: "iata", name: "Általános (IATA-ajánlás)", cabinKg: 8, cabinSize: "55×35×20 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "ryanair", name: "Ryanair", cabinKg: 10, cabinSize: "55×40×20 cm", checkedKg: 20, checkedMax: 32 },
-  { id: "wizzair", name: "Wizz Air", cabinKg: 10, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "easyjet", name: "easyJet", cabinKg: 15, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "lufthansa", name: "Lufthansa", cabinKg: 8, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "ba", name: "British Airways", cabinKg: 23, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "airfrance", name: "Air France / KLM", cabinKg: 12, cabinSize: "55×35×25 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "emirates", name: "Emirates", cabinKg: 7, cabinSize: "55×38×20 cm", checkedKg: 30, checkedMax: 32 },
-  { id: "delta", name: "Delta", cabinKg: null, cabinSize: "56×35×23 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "united", name: "United", cabinKg: null, cabinSize: "56×35×22 cm", checkedKg: 23, checkedMax: 32 },
-  { id: "american", name: "American Airlines", cabinKg: null, cabinSize: "56×36×23 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "iata", name: "Általános (IATA-ajánlás)", cabinKg: 8, cabinSize: "55×35×20 cm", checkedKg: 23, checkedMax: 32, url: "https://www.iata.org/en/programs/ops-infra/baggage/check-bag/" },
+  { id: "ryanair", name: "Ryanair", cabinKg: 10, cabinSize: "55×40×20 cm", checkedKg: 20, checkedMax: 32, url: "https://www.ryanair.com/gb/en/useful-info/help-centre/terms-and-conditions/baggage" },
+  { id: "wizzair", name: "Wizz Air", cabinKg: 10, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32, url: "https://wizzair.com/en-gb/information-and-services/travel-information/baggage" },
+  { id: "easyjet", name: "easyJet", cabinKg: 15, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32, url: "https://www.easyjet.com/en/help/baggage" },
+  { id: "binter_atr", name: "Binter Canarias (ATR)", cabinKg: 8, cabinSize: "45×35×25 cm", checkedKg: 23, checkedMax: 32, url: "https://www.bintercanarias.com/en/information/hand-luggage" },
+  { id: "binter_emb", name: "Binter Canarias (Embraer)", cabinKg: 8, cabinSize: "52×40×25 cm", checkedKg: 23, checkedMax: 32, url: "https://www.bintercanarias.com/en/information/hand-luggage" },
+  { id: "lufthansa", name: "Lufthansa", cabinKg: 8, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32, url: "https://www.lufthansa.com/de/en/free-baggage" },
+  { id: "ba", name: "British Airways", cabinKg: 23, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32, url: "https://www.britishairways.com/en-gb/information/baggage-essentials" },
+  { id: "airfrance", name: "Air France / KLM", cabinKg: 12, cabinSize: "55×35×25 cm", checkedKg: 23, checkedMax: 32, url: "https://wwws.airfrance.fr/en/information/bagages" },
+  { id: "emirates", name: "Emirates", cabinKg: 7, cabinSize: "55×38×20 cm", checkedKg: 30, checkedMax: 32, url: "https://www.emirates.com/english/before-you-fly/baggage/" },
+  { id: "delta", name: "Delta", cabinKg: null, cabinSize: "56×35×23 cm", checkedKg: 23, checkedMax: 32, url: "https://www.delta.com/us/en/baggage/overview" },
+  { id: "united", name: "United", cabinKg: null, cabinSize: "56×35×22 cm", checkedKg: 23, checkedMax: 32, url: "https://www.united.com/en/us/fly/baggage.html" },
+  { id: "american", name: "American Airlines", cabinKg: null, cabinSize: "56×36×23 cm", checkedKg: 23, checkedMax: 32, url: "https://www.aa.com/i18n/travel-info/baggage/baggage.jsp" },
 ];
 
 /* korlátozott tárgyak: ha az adott tárgy a "tilos" helyre kerül, jelezzük.
@@ -839,6 +841,8 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
   const [caseConfirm, setCaseConfirm] = useState(null); // törlendő bőrönd id
   const [limitEdit, setLimitEdit] = useState(false);
   const [limitDraft, setLimitDraft] = useState("");
+  const [editItemId, setEditItemId] = useState(null);
+  const [editItemDraft, setEditItemDraft] = useState("");
   const [tplSaving, setTplSaving] = useState(false);
   const [tplName, setTplName] = useState("");
   const [toast, setToast] = useState(null);
@@ -901,6 +905,15 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
     }));
   const removeItem = (id) =>
     onUpdate((t) => ({ ...t, items: t.items.filter((i) => i.id !== id) }));
+  const startEditItem = (it) => { setEditItemDraft(it.name); setEditItemId(it.id); };
+  const commitEditItem = (id) => {
+    const name = editItemDraft.trim();
+    if (name) onUpdate((t) => ({
+      ...t,
+      items: t.items.map((i) => (i.id === id ? { ...i, name } : i)),
+    }));
+    setEditItemId(null);
+  };
   const addItem = (name, cat, qty) =>
     onUpdate((t) => ({
       ...t,
@@ -1253,6 +1266,14 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                 {caseFlagCount} tétel ütközhet a szabályokkal — lásd a jelöléseket a listában.
               </div>
             )}
+            {airline.url && (
+              <a className="uv-air-link" href={airline.url} target="_blank" rel="noopener noreferrer">
+                Hivatalos poggyászszabályok megnézése
+                <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+                  <path d="M14 5h5v5M19 5l-8 8M11 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"
+                    fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </a>
+            )}
           </div>
         )}
       </div>
@@ -1397,7 +1418,17 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                     )}
                   </button>
                   <div className="uv-item-main">
-                    <span className="uv-item-name">{i.name}</span>
+                    {editItemId === i.id ? (
+                      <input className="uv-item-edit" value={editItemDraft} autoFocus
+                        onChange={(e) => setEditItemDraft(e.target.value)}
+                        onBlur={() => commitEditItem(i.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitEditItem(i.id);
+                          if (e.key === "Escape") setEditItemId(null);
+                        }} />
+                    ) : (
+                      <span className="uv-item-name">{i.name}</span>
+                    )}
                     <WeightChip item={i} onSave={(g) => setItemWeight(i.id, g)} />
                     {flag && (
                       <span className="uv-flag" title={flag.note}>
@@ -1413,6 +1444,12 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                     <span>{i.qty}</span>
                     <button onClick={() => setQty(i.id, i.qty + 1)} aria-label="Több">+</button>
                   </div>
+                  <button className="uv-edit" onClick={() => startEditItem(i)}
+                    aria-label="Tétel átnevezése">
+                    <svg viewBox="0 0 24 24" width="15" height="15"><path
+                      d="M14 5l5 5M4 20l1-4L16 5l3 3L8 19l-4 1z" fill="none" stroke="currentColor"
+                      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
                   <button className="uv-trash" onClick={() => removeItem(i.id)}
                     aria-label="Tétel törlése">
                     <svg viewBox="0 0 24 24" width="16" height="16"><path
@@ -1703,13 +1740,17 @@ function InsuranceModal({ trip, onClose, onMarkDone }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           max_tokens: 1000,
           messages: [{ role: "user", content: prompt }],
           tools: [{ type: "web_search_20250305", name: "web_search" }],
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const m = data && data.error;
+        throw new Error(m ? String(m.message || m) : `Hiba (${res.status})`);
+      }
       const text = (data.content || [])
         .filter((b) => b.type === "text")
         .map((b) => b.text)
@@ -1723,7 +1764,11 @@ function InsuranceModal({ trip, onClose, onMarkDone }) {
       setResults(parsed);
       setState("done");
     } catch (e) {
-      setErrMsg("Most nem sikerült javaslatot kérni. Próbáld újra kicsit később.");
+      setErrMsg(
+        /ANTHROPIC_API_KEY/i.test(String(e && e.message))
+          ? "A funkcióhoz be kell állítani az Anthropic API-kulcsot a Netlify-on (ANTHROPIC_API_KEY), majd újraépíteni."
+          : "Most nem sikerült javaslatot kérni. Próbáld újra kicsit később."
+      );
       setState("error");
     }
   };
@@ -2146,6 +2191,9 @@ function Style() {
 .uv-air-hint{margin:0;font-size:12.5px;color:var(--soft);line-height:1.45;}
 .uv-air-note{color:var(--faint);}
 .uv-air-flags{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#B0564E;line-height:1.35;}
+.uv-air-link{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:12.5px;font-weight:600;
+  color:var(--moss);text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:6px 11px;background:var(--bg2);}
+.uv-air-link:hover{border-color:var(--moss);background:var(--surface);}
 .uv-flag{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:11px;color:#B0564E;
   background:rgba(176,86,78,.08);border:1px solid rgba(176,86,78,.28);border-radius:7px;padding:2px 7px;}
 
@@ -2177,6 +2225,12 @@ function Style() {
 .uv-trash{border:none;background:none;color:var(--faint);cursor:pointer;padding:5px;border-radius:8px;
   flex:none;transition:color .12s,background .12s;}
 .uv-trash:hover{color:#B0564E;background:#f6ece9;}
+.uv-edit{border:none;background:none;color:var(--faint);cursor:pointer;padding:5px;border-radius:8px;
+  flex:none;transition:color .12s,background .12s;}
+.uv-edit:hover{color:var(--moss);background:var(--bg2);}
+.uv-item-edit{flex:1;min-width:0;font:inherit;font-size:14.5px;font-weight:500;color:var(--ink);
+  background:var(--bg2);border:1px solid var(--moss);border-radius:8px;padding:5px 9px;}
+.uv-item-edit:focus{outline:none;}
 
 /* all set */
 .uv-allset{text-align:center;padding:36px 20px;color:var(--soft);}
