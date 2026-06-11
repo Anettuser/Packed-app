@@ -522,7 +522,7 @@ export default function App({ account = null } = {}) {
   return (
     <div className="uv-root">
       <Style />
-      <div className="uv-shell">
+      <div className={"uv-shell" + (open ? "" : " uv-shell-home")}>
         {open ? (
           <TripView
             trip={open}
@@ -599,7 +599,7 @@ function Home({ trips, docs, loaded, account, onOpen, onNew, onTogglePrep, onOpe
     <>
       <header className="uv-head">
         <div className="uv-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="25" height="25">
+          <svg viewBox="0 0 64 64" width="34" height="34">
             <path d="M24 18v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2" fill="none"
               stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" />
             <rect x="12" y="18" width="40" height="34" rx="8" fill="currentColor" />
@@ -608,7 +608,7 @@ function Home({ trips, docs, loaded, account, onOpen, onNew, onTogglePrep, onOpe
           </svg>
         </div>
         <div className="uv-head-text">
-          <h1 className="uv-title">Packed</h1>
+          <h1 className="uv-title">Útravaló</h1>
           <p className="uv-tag">Nothing left behind.</p>
         </div>
         <button className="uv-docs-btn" onClick={onOpenDocs}>
@@ -790,6 +790,43 @@ function NewTrip({ onClose, onCreate, customTpls, onRemoveTemplate }) {
 }
 
 /* ---------------------------- trip view --------------------------- */
+/* --- légitársaság-poggyászszabályok ---
+   A kg/méret értékek tájékoztató, gazdaságos osztályú alapértékek (2026); a tarifa
+   és az útvonal módosíthatja őket. cabinKg=null → nincs súlyhatár, csak méret. */
+const AIRLINES = [
+  { id: "iata", name: "Általános (IATA-ajánlás)", cabinKg: 8, cabinSize: "55×35×20 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "ryanair", name: "Ryanair", cabinKg: 10, cabinSize: "55×40×20 cm", checkedKg: 20, checkedMax: 32 },
+  { id: "wizzair", name: "Wizz Air", cabinKg: 10, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "easyjet", name: "easyJet", cabinKg: 15, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "lufthansa", name: "Lufthansa", cabinKg: 8, cabinSize: "55×40×23 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "ba", name: "British Airways", cabinKg: 23, cabinSize: "56×45×25 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "airfrance", name: "Air France / KLM", cabinKg: 12, cabinSize: "55×35×25 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "emirates", name: "Emirates", cabinKg: 7, cabinSize: "55×38×20 cm", checkedKg: 30, checkedMax: 32 },
+  { id: "delta", name: "Delta", cabinKg: null, cabinSize: "56×35×23 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "united", name: "United", cabinKg: null, cabinSize: "56×35×22 cm", checkedKg: 23, checkedMax: 32 },
+  { id: "american", name: "American Airlines", cabinKg: null, cabinSize: "56×36×23 cm", checkedKg: 23, checkedMax: 32 },
+];
+
+/* korlátozott tárgyak: ha az adott tárgy a "tilos" helyre kerül, jelezzük.
+   badPlace: ahol NEM lehet (cabin = kézi, checked = feladott) */
+const RESTRICT_RULES = [
+  { id: "battery", re: /power\s?bank|powerbank|p[óo]takk|akkumul|\bakku\b|e-?cigi|vape|elektromos cigaret/i,
+    badPlace: "checked", label: "Csak kézipoggyászban", note: "Power bank és pótakkumulátor tilos a feladott bőröndben — vidd a kézipoggyászban." },
+  { id: "liquid", re: /folyad|sampon|tusf[üu]rd|balzsam|kr[ée]m|parf[üu]m|k[öo]lni|spray|dezodor|fogkr[ée]m|\bg[ée]l\b|napt[ej]|f[ée]nyv[ée]d|arclemos|s[ée]rum/i,
+    badPlace: "cabin", label: "Kézi: max 100 ml", note: "Folyadékot, gélt a kézipoggyászban csak max 100 ml-es flakonban vihetsz (1 literes átlátszó tasakban)." },
+  { id: "sharp", re: /\bk[ée]s\b|oll[óo]|bicska|multitool|zsebk[ée]s|sv[áa]jci|borotvapeng|\bpenge\b/i,
+    badPlace: "cabin", label: "Csak feladott poggyászban", note: "Éles tárgyak nem mehetnek a kézipoggyászba — tedd a feladott bőröndbe." },
+];
+
+function itemRestriction(name, bagType) {
+  if (!bagType) return null;
+  const n = (name || "").toLowerCase();
+  for (const r of RESTRICT_RULES) {
+    if (r.badPlace === bagType && r.re.test(n)) return r;
+  }
+  return null;
+}
+
 function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOpenDocs }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(trip.name);
@@ -939,6 +976,37 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
     applyLimit(!isNaN(kg) && kg > 0 ? Math.round(kg * 1000) : null);
   };
 
+  /* --- légitársaság-szabályok --- */
+  const airline = AIRLINES.find((a) => a.id === trip.airline) || null;
+  const limitForBag = (a, bt) => {
+    if (!a) return undefined;
+    const kg = bt === "cabin" ? a.cabinKg : a.checkedKg;
+    return kg ? kg * 1000 : null;
+  };
+  const setAirline = (id) =>
+    onUpdate((t) => {
+      const a = AIRLINES.find((x) => x.id === id) || null;
+      return {
+        ...t,
+        airline: id || undefined,
+        cases: t.cases.map((c) =>
+          c.bagType && a ? { ...c, limit: limitForBag(a, c.bagType) } : c
+        ),
+      };
+    });
+  const setBagType = (bt) =>
+    onUpdate((t) => {
+      const a = AIRLINES.find((x) => x.id === t.airline) || null;
+      return {
+        ...t,
+        cases: t.cases.map((c) =>
+          c.id === selected.id
+            ? { ...c, bagType: bt, ...(a ? { limit: limitForBag(a, bt) } : {}) }
+            : c
+        ),
+      };
+    });
+
   /* --- számítások --- */
   const total = trip.items.length;
   const done = trip.items.filter((i) => i.packed).length;
@@ -961,6 +1029,9 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
   };
 
   const caseItems = trip.items.filter((i) => i.caseId === selected.id);
+  const caseFlagCount = selected.bagType
+    ? caseItems.filter((i) => itemRestriction(i.name, selected.bagType)).length
+    : 0;
   const caseTotal = caseItems.length;
   const caseDone = caseItems.filter((i) => i.packed).length;
   const caseTotalG = caseItems.reduce((s, i) => s + i.w * i.qty, 0);
@@ -1142,6 +1213,50 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
           </button>
         )}
       </div>
+
+      {/* légitársaság-szabályok */}
+      <div className="uv-air">
+        <label className="uv-air-pick">
+          <span className="uv-air-lbl">Légitársaság</span>
+          <select className="uv-air-sel" value={trip.airline || ""}
+            onChange={(e) => setAirline(e.target.value)}>
+            <option value="">— nincs / általános —</option>
+            {AIRLINES.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </label>
+
+        {airline && (
+          <div className="uv-air-sub">
+            <div className="uv-air-seg" role="group" aria-label="Poggyász típusa">
+              <button className={"uv-air-segb" + (selected.bagType === "cabin" ? " is-on" : "")}
+                onClick={() => setBagType("cabin")}>Kézipoggyász</button>
+              <button className={"uv-air-segb" + (selected.bagType === "checked" ? " is-on" : "")}
+                onClick={() => setBagType("checked")}>Feladott</button>
+            </div>
+            {selected.bagType ? (
+              <p className="uv-air-hint">
+                {selected.bagType === "cabin"
+                  ? `${airline.cabinSize}${airline.cabinKg ? " · max " + airline.cabinKg + " kg" : " · nincs súlyhatár, csak méret"}`
+                  : `max ${airline.checkedKg} kg · felárral ${airline.checkedMax} kg-ig`}
+                <span className="uv-air-note"> — tájékoztató érték, a tarifádtól függhet.</span>
+              </p>
+            ) : (
+              <p className="uv-air-hint">Válaszd ki, ez kézi- vagy feladott poggyász — beállítom a súlykorlátot.</p>
+            )}
+            {caseFlagCount > 0 && (
+              <div className="uv-air-flags">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M12 4l9 16H3z" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" />
+                  <path d="M12 10v4M12 17v.4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>
+                {caseFlagCount} tétel ütközhet a szabályokkal — lásd a jelöléseket a listában.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="uv-cw">
         <div className="uv-cw-top">
           <span className="uv-cw-main">
@@ -1268,7 +1383,9 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                 {d.cat.label}
                 <span className="uv-group-count">{d.all.length}</span>
               </h4>
-              {d.vis.map((i) => (
+              {d.vis.map((i) => {
+                const flag = itemRestriction(i.name, selected.bagType);
+                return (
                 <div key={i.id} className={"uv-item" + (i.packed ? " is-packed" : "")}>
                   <button className="uv-check" onClick={() => toggle(i.id)}
                     aria-pressed={i.packed} aria-label={i.packed ? "Kivenni" : "Becsomagolva"}
@@ -1282,6 +1399,14 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                   <div className="uv-item-main">
                     <span className="uv-item-name">{i.name}</span>
                     <WeightChip item={i} onSave={(g) => setItemWeight(i.id, g)} />
+                    {flag && (
+                      <span className="uv-flag" title={flag.note}>
+                        <svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">
+                          <path d="M12 4l9 16H3z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                          <path d="M12 10v4M12 17v.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                        {flag.label}
+                      </span>
+                    )}
                   </div>
                   <div className="uv-qty">
                     <button onClick={() => setQty(i.id, i.qty - 1)} aria-label="Kevesebb">–</button>
@@ -1295,7 +1420,8 @@ function TripView({ trip, docs, onBack, onUpdate, onDelete, onSaveTemplate, onOp
                       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </button>
                 </div>
-              ))}
+                );
+              })}
               {filter === "all" && (
                 <GroupAdder
                   catKey={d.cat.key}
@@ -1679,7 +1805,7 @@ function InsuranceModal({ trip, onClose, onMarkDone }) {
 function Style() {
   return (
     <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Gloria+Hallelujah&family=Mulish:wght@400;500;600;700&display=swap');
 
 .uv-root{
   --bg:#E8ECE0; --bg2:#EFF2E8; --surface:#FCFDF9; --surface2:#F4F6EE;
@@ -1693,18 +1819,19 @@ function Style() {
   -webkit-font-smoothing:antialiased;
 }
 .uv-root *{box-sizing:border-box;}
-.uv-shell{max-width:560px;margin:0 auto;}
+.uv-shell{max-width:600px;margin:0 auto;}
+.uv-shell-home{max-width:940px;}
 .uv-muted{color:var(--soft);font-size:13.5px;line-height:1.5;margin:2px 0;}
 .uv-eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;}
 
 /* header */
 .uv-head{display:flex;align-items:center;gap:13px;margin-bottom:26px;}
 .uv-head-text{flex:1;min-width:0;}
-.uv-mark{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+.uv-mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
   background:var(--surface);color:var(--moss);border:1px solid var(--line);
   box-shadow:0 1px 0 rgba(65,82,58,.04);}
-.uv-title{font-family:'Fraunces',serif;font-weight:500;font-size:27px;margin:0;letter-spacing:-.01em;}
-.uv-tag{margin:1px 0 0;color:var(--soft);font-size:13.5px;font-style:italic;font-family:'Fraunces',serif;}
+.uv-title{font-family:'Gloria Hallelujah',cursive;font-weight:400;font-size:20px;margin:0;line-height:1.1;}
+.uv-tag{margin:2px 0 0;color:var(--soft);font-size:11px;font-family:'Gloria Hallelujah',cursive;}
 .uv-docs-btn{position:relative;display:inline-flex;align-items:center;gap:7px;flex:none;
   background:var(--surface);border:1px solid var(--line);border-radius:11px;color:var(--moss);
   font-family:'Mulish';font-weight:600;font-size:13px;cursor:pointer;padding:9px 13px;transition:all .15s;}
@@ -1744,12 +1871,12 @@ function Style() {
 
 /* empty */
 .uv-empty{background:var(--surface);border:1px solid var(--line);border-radius:18px;
-  padding:30px 26px;text-align:center;}
+  padding:30px 26px;text-align:center;max-width:560px;margin:0 auto;}
 .uv-empty-lead{font-family:'Fraunces',serif;font-size:19px;margin:0 0 6px;}
 .uv-empty .uv-cta{margin-top:18px;}
 
 /* trip grid */
-.uv-grid{display:grid;gap:12px;}
+.uv-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
 .uv-card{display:flex;flex-direction:column;gap:11px;text-align:left;width:100%;
   background:var(--surface);border:1px solid var(--line);border-radius:16px;
   padding:15px 17px;cursor:pointer;font-family:'Mulish';color:var(--ink);
@@ -2003,6 +2130,25 @@ function Style() {
   letter-spacing:.03em;color:var(--soft);margin:0 2px 9px;text-transform:uppercase;}
 .uv-dot{width:8px;height:8px;border-radius:50%;flex:none;}
 .uv-group-count{margin-left:auto;color:var(--faint);font-weight:600;font-size:12px;}
+/* légitársaság-szabályok */
+.uv-air{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 10px;}
+.uv-air-pick{display:flex;align-items:center;gap:10px;}
+.uv-air-lbl{font-size:12.5px;color:var(--soft);font-weight:600;white-space:nowrap;}
+.uv-air-sel{flex:1;font:inherit;font-size:14px;color:var(--ink);background:var(--bg2);
+  border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;}
+.uv-air-sel:focus{outline:none;border-color:var(--moss);}
+.uv-air-sub{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.uv-air-seg{display:inline-flex;align-self:flex-start;background:var(--bg2);border:1px solid var(--line);
+  border-radius:10px;padding:3px;gap:3px;}
+.uv-air-segb{font:inherit;font-size:13px;color:var(--soft);background:none;border:none;border-radius:7px;
+  padding:6px 12px;cursor:pointer;}
+.uv-air-segb.is-on{background:var(--moss);color:#fff;}
+.uv-air-hint{margin:0;font-size:12.5px;color:var(--soft);line-height:1.45;}
+.uv-air-note{color:var(--faint);}
+.uv-air-flags{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:#B0564E;line-height:1.35;}
+.uv-flag{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:11px;color:#B0564E;
+  background:rgba(176,86,78,.08);border:1px solid rgba(176,86,78,.28);border-radius:7px;padding:2px 7px;}
+
 .uv-item{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
   border-radius:12px;padding:11px 13px;margin-bottom:7px;transition:opacity .2s,background .2s;}
 .uv-item.is-packed{background:var(--surface2);}
