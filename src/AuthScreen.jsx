@@ -51,8 +51,8 @@ export default function AuthScreen() {
               strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h1 style={S.title}>Packed</h1>
-        <p style={S.tag}>Nothing left behind.</p>
+        <h1 style={S.title}>Útravaló</h1>
+        <p style={S.tag}>Semmi sem marad ki.</p>
 
         <div style={S.tabs}>
           <button style={tab(mode === "in")} onClick={() => { setMode("in"); setMsg(null); }}>Bejelentkezés</button>
@@ -110,8 +110,8 @@ const S = {
     width: 56, height: 56, borderRadius: 16, margin: "0 auto 14px", display: "grid",
     placeItems: "center", background: "#fff", border: `1px solid ${T.line}`,
   },
-  title: { fontFamily: "'Fraunces',Georgia,serif", fontWeight: 500, fontSize: 28, margin: 0 },
-  tag: { fontFamily: "'Fraunces',Georgia,serif", fontStyle: "italic", color: T.soft, fontSize: 14, margin: "2px 0 20px" },
+  title: { fontFamily: "'Mulish',sans-serif", fontWeight: 700, fontSize: 27, letterSpacing: "-.01em", margin: 0, color: T.ink },
+  tag: { fontFamily: "'Mulish',sans-serif", fontWeight: 500, color: T.soft, fontSize: 14, margin: "6px 0 20px" },
   tabs: { display: "flex", gap: 4, background: "#EEF1E9", borderRadius: 11, padding: 4, marginBottom: 16 },
   input: {
     width: "100%", boxSizing: "border-box", fontFamily: "'Mulish',sans-serif", fontSize: 15,
