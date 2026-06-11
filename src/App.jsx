@@ -599,7 +599,7 @@ function Home({ trips, docs, loaded, account, onOpen, onNew, onTogglePrep, onOpe
     <>
       <header className="uv-head">
         <div className="uv-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="34" height="34">
+          <svg viewBox="0 0 64 64" width="40" height="40">
             <path d="M24 18v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2" fill="none"
               stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" />
             <rect x="12" y="18" width="40" height="34" rx="8" fill="currentColor" />
@@ -609,7 +609,7 @@ function Home({ trips, docs, loaded, account, onOpen, onNew, onTogglePrep, onOpe
         </div>
         <div className="uv-head-text">
           <h1 className="uv-title">Útravaló</h1>
-          <p className="uv-tag">Nothing left behind.</p>
+          <p className="uv-tag">Semmi sem marad ki.</p>
         </div>
         <button className="uv-docs-btn" onClick={onOpenDocs}>
           <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="5" width="18" height="14"
@@ -1805,7 +1805,7 @@ function InsuranceModal({ trip, onClose, onMarkDone }) {
 function Style() {
   return (
     <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Gloria+Hallelujah&family=Mulish:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Mulish:wght@400;500;600;700&display=swap');
 
 .uv-root{
   --bg:#E8ECE0; --bg2:#EFF2E8; --surface:#FCFDF9; --surface2:#F4F6EE;
@@ -1827,11 +1827,11 @@ function Style() {
 /* header */
 .uv-head{display:flex;align-items:center;gap:13px;margin-bottom:26px;}
 .uv-head-text{flex:1;min-width:0;}
-.uv-mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+.uv-mark{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;
   background:var(--surface);color:var(--moss);border:1px solid var(--line);
   box-shadow:0 1px 0 rgba(65,82,58,.04);}
-.uv-title{font-family:'Gloria Hallelujah',cursive;font-weight:400;font-size:20px;margin:0;line-height:1.1;}
-.uv-tag{margin:2px 0 0;color:var(--soft);font-size:11px;font-family:'Gloria Hallelujah',cursive;}
+.uv-title{font-family:'Mulish',sans-serif;font-weight:700;font-size:27px;margin:0;line-height:1.1;letter-spacing:-.01em;}
+.uv-tag{margin:2px 0 0;color:var(--soft);font-size:14px;font-family:'Mulish',sans-serif;font-weight:500;}
 .uv-docs-btn{position:relative;display:inline-flex;align-items:center;gap:7px;flex:none;
   background:var(--surface);border:1px solid var(--line);border-radius:11px;color:var(--moss);
   font-family:'Mulish';font-weight:600;font-size:13px;cursor:pointer;padding:9px 13px;transition:all .15s;}
